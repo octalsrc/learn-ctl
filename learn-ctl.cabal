@@ -1,0 +1,21 @@
+name:                learn-ctl
+version:             0.1.0.0
+synopsis:            Learning tool for CTL model-checking
+license:             BSD3
+license-file:        LICENSE
+author:              octalsrc
+maintainer:          nicklewchenko92@gmail.com
+category:            Math
+build-type:          Simple
+extra-source-files:  ChangeLog.md
+cabal-version:       >=1.10
+
+executable learn-ctl
+  main-is:             Main.hs
+  other-modules:       Data.Graph.Kripke
+  -- other-extensions:    
+  build-depends:       base >=4.9 && <4.10
+                     , fgl >=5.5 && <5.6
+                     , hatt >=1.5 && <1.6
+  hs-source-dirs:      src
+  default-language:    Haskell2010
