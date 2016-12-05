@@ -7,7 +7,11 @@ import Data.Logic.Propositional
 import Data.Graph.Inductive.Graph
 import Data.Graph.Kripke
 
-nodeMap :: Expr -> KrCtx -> Mapping
+type KripkeCTL = Kripke Var
+type GrCTL = KrGr Var
+type CtxCTL = KrCtx Var
+
+nodeMap :: Expr -> CtxCTL -> Mapping
 nodeMap e c = let vs = variables e
                   ps = lab' c
                   f v = (v, elem v ps)
@@ -21,19 +25,19 @@ data CTL = Atom Expr
          | EU CTL CTL
          | EG CTL
 
-check :: Kripke -> CTL -> Maybe [Int]
+check :: KripkeCTL -> CTL -> Maybe [Int]
 check = undefined
 
-satPhi :: Expr -> KrCtx -> Bool
+satPhi :: Expr -> CtxCTL -> Bool
 satPhi exp c = interpret exp (nodeMap exp c)
 
-type OpCTL e = KrGr -> e -> KrCtx -> Maybe Path
+type OpCTL e = GrCTL -> e -> CtxCTL -> Maybe Path
 
-satOp :: OpCTL e -> Kripke -> e -> [(KrCtx, Path)]
+satOp :: OpCTL e -> KripkeCTL -> e -> [(CtxCTL, Path)]
 satOp op kr exp = catMaybes $ map runOp (kop contexts kr)
   where runOp c = fmap (\path -> (c,path)) (op (krGr kr) exp c)
 
-sucEX :: KrGr -> Expr -> KrCtx -> [KrCtx]
+sucEX :: GrCTL -> Expr -> CtxCTL -> [CtxCTL]
 sucEX gr exp c = filter (satPhi exp) (succtx gr c)
 
 satEX :: OpCTL Expr
@@ -56,7 +60,15 @@ satEU gr (psi,phi) c =
         end c = const (satPhi phi c)
         sucS c hist = filter (\c -> isNotCycle c hist) (sucEX gr fml c)
 
-testPrint :: [(KrCtx,Path)] -> IO ()
+testPrint :: [(CtxCTL,Path)] -> IO ()
 testPrint = putStrLn 
             . concat 
             . map (\s -> show s ++ "\n") . map (\(c,p) -> (node' c,p))
+
+example :: KripkeCTL
+example = let nodes = [ (1,[Var 'p'])
+                      , (2,[Var 'q']) ]
+              edges = [ (1,2,())
+                      , (1,1,())
+                      , (2,2,()) ]
+          in mkKripke (mkGraph nodes edges) [1]
