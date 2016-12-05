@@ -1,6 +1,7 @@
 module ModelChecking.CTL where
 
 import Data.Map (fromList)
+import Data.List (union, intersect, (\\), nub)
 import Data.Maybe (listToMaybe, isJust, catMaybes)
 
 import Data.Logic.Propositional
@@ -17,74 +18,79 @@ nodeMap e c = let vs = variables e
                   f v = (v, elem v ps)
               in fromList (map f vs)
 
+atom :: Char -> CTL
+atom = Atom . Variable . Var
+
 data CTL = Atom Expr
          | Neg CTL
          | Con CTL CTL
          | Dis CTL CTL
          | EX CTL
-         | EU CTL CTL
          | EG CTL
+         | EU CTL CTL
 
-check :: KripkeCTL -> CTL -> [Node]
-check (Kripke (is,gr)) ctl = 
-  let sats = nodeVals $ checkNode gr ctl
+modelCheck :: KripkeCTL -> CTL -> [Node]
+modelCheck (Kripke (is,gr)) ctl = 
+  let sats = check gr ctl
   in filter (not . flip elem sats) is
 
-nodeVals :: (GrCTL, Expr) -> [Node]
-nodeVals = undefined  
+check :: GrCTL -> CTL -> [Node]
+check gr c = 
+  case c of
+    Atom e -> satOp opAtom gr e
+    Neg c' -> rop (nodes gr \\) gr c'
+    Con c1' c2' -> rop2 intersect gr c1' c2'
+    Dis c1' c2' -> rop2 union gr c2' c2'
+    EX c' -> rop (satOp opEX gr) gr c'
+    EG c' -> rop (satOp opEG gr) gr c'
+    EU c1' c2' -> rop2 (\a b -> satOp opEU gr (a,b)) gr c1' c2'
 
-checkNode :: GrCTL -> CTL -> (GrCTL, Expr)
-checkNode gr ctl = 
-  case ctl of
-    Atom e -> (gr,e)
-    Neg     c -> po1 Negation gr c
-    Con c1 c2 -> po2 Conjunction gr c1 c2
-    Dis c1 c2 -> po2 Disjunction gr c1 c2
-
-
-po1 :: (Expr -> a) -> GrCTL -> CTL -> (GrCTL, a)
-po1 f gr c = let (gr', e) = checkNode gr c
-             in (gr',f e)
-
-po2 :: (Expr -> Expr -> Expr) -> GrCTL -> CTL -> CTL -> (GrCTL, Expr)
-po2 f gr c1 c2 = let (gr', f') = po1 f gr c1
-                 in po1 f' gr' c2
-
-satPhi :: Expr -> CtxCTL -> Bool
-satPhi exp c = interpret exp (nodeMap exp c)
+rop f gr c' = nub $ f (check gr c')
+rop2 f2 gr c1 c2 = nub $ f2 (check gr c1) (check gr c2)
 
 type OpCTL e = GrCTL -> e -> CtxCTL -> Maybe Path
 
-satOp :: OpCTL e -> KripkeCTL -> e -> [(CtxCTL, Path)]
-satOp op kr exp = catMaybes $ map runOp (kop contexts kr)
-  where runOp c = fmap (\path -> (c,path)) (op (krGr kr) exp c)
+satOp' :: OpCTL e
+       -> GrCTL
+       -> e 
+       -> [(CtxCTL, Path)]
+satOp' op gr phi = catMaybes $ map runOp (contexts gr)
+  where runOp c = fmap (\path -> (c,path)) (op gr phi c)
 
-satAtom :: OpCTL Expr
-satAtom gr exp c = if satPhi exp c
-                      then Just [node' c]
-                      else Nothing
+satOp op kr phi = resTN $ satOp' op kr phi
 
-sucEX :: GrCTL -> Expr -> CtxCTL -> [CtxCTL]
-sucEX gr exp c = filter (satPhi exp) (succtx gr c)
+resTN :: [(CtxCTL, Path)] -> [Node]
+resTN = map node' . map fst
 
-satEX :: OpCTL Expr
-satEX gr exp c = let res = sucEX gr exp c
-                     mkp c' = [node' c, node' c']
+opAtom :: OpCTL Expr
+opAtom gr exp c = if interpret exp (nodeMap exp c)
+                     then Just [node' c]
+                     else Nothing
+
+sat :: [Node] -> CtxCTL -> Bool
+sat phi = flip elem phi . node'
+
+sucEX :: GrCTL -> [Node] -> CtxCTL -> [CtxCTL]
+sucEX gr phi c = filter (sat phi) (succtx gr c)
+
+opEX :: OpCTL [Node]
+opEX gr phi c = let res = sucEX gr phi c
+                    mkp c' = [node' c, node' c']
                  in (fmap mkp . listToMaybe) res
 
-satEG :: OpCTL Expr
-satEG gr exp c = 
-  if satPhi exp c
-     then listToMaybe $ findCycles (\c _ -> sucEX gr exp c) gr [] c
+opEG :: OpCTL [Node]
+opEG gr phi c = 
+  if sat phi c
+     then listToMaybe $ findCycles (\c _ -> sucEX gr phi c) gr [] c
      else Nothing
 
-satEU :: OpCTL (Expr,Expr)
-satEU gr (psi,phi) c = 
-  if satPhi fml c
+opEU :: OpCTL ([Node],[Node])
+opEU gr (psi,phi) c = 
+  if sat fml c
      then listToMaybe $ findPaths end sucS gr [] c
      else Nothing
-  where fml = Disjunction psi phi
-        end c = const (satPhi phi c)
+  where fml = union psi phi
+        end c = const (sat phi c)
         sucS c hist = filter (\c -> isNotCycle c hist) (sucEX gr fml c)
 
 testPrint :: [(CtxCTL,Path)] -> IO ()
