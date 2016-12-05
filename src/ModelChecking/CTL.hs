@@ -18,15 +18,37 @@ nodeMap e c = let vs = variables e
               in fromList (map f vs)
 
 data CTL = Atom Expr
+         | Neg CTL
          | Con CTL CTL
          | Dis CTL CTL
-         | Neg CTL
          | EX CTL
          | EU CTL CTL
          | EG CTL
 
-check :: KripkeCTL -> CTL -> Maybe [Int]
-check = undefined
+check :: KripkeCTL -> CTL -> [Node]
+check (Kripke (is,gr)) ctl = 
+  let sats = nodeVals $ checkNode gr ctl
+  in filter (not . flip elem sats) is
+
+nodeVals :: (GrCTL, Expr) -> [Node]
+nodeVals = undefined  
+
+checkNode :: GrCTL -> CTL -> (GrCTL, Expr)
+checkNode gr ctl = 
+  case ctl of
+    Atom e -> (gr,e)
+    Neg     c -> po1 Negation gr c
+    Con c1 c2 -> po2 Conjunction gr c1 c2
+    Dis c1 c2 -> po2 Disjunction gr c1 c2
+
+
+po1 :: (Expr -> a) -> GrCTL -> CTL -> (GrCTL, a)
+po1 f gr c = let (gr', e) = checkNode gr c
+             in (gr',f e)
+
+po2 :: (Expr -> Expr -> Expr) -> GrCTL -> CTL -> CTL -> (GrCTL, Expr)
+po2 f gr c1 c2 = let (gr', f') = po1 f gr c1
+                 in po1 f' gr' c2
 
 satPhi :: Expr -> CtxCTL -> Bool
 satPhi exp c = interpret exp (nodeMap exp c)
@@ -36,6 +58,11 @@ type OpCTL e = GrCTL -> e -> CtxCTL -> Maybe Path
 satOp :: OpCTL e -> KripkeCTL -> e -> [(CtxCTL, Path)]
 satOp op kr exp = catMaybes $ map runOp (kop contexts kr)
   where runOp c = fmap (\path -> (c,path)) (op (krGr kr) exp c)
+
+satAtom :: OpCTL Expr
+satAtom gr exp c = if satPhi exp c
+                      then Just [node' c]
+                      else Nothing
 
 sucEX :: GrCTL -> Expr -> CtxCTL -> [CtxCTL]
 sucEX gr exp c = filter (satPhi exp) (succtx gr c)
@@ -72,3 +99,6 @@ example = let nodes = [ (1,[Var 'p'])
                       , (1,1,())
                       , (2,2,()) ]
           in mkKripke (mkGraph nodes edges) [1]
+
+example2 :: KripkeCTL
+example2 = kopk (addLabel (Var 'w') ((kop context) example 2)) example
