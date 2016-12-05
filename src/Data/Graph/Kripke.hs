@@ -32,10 +32,26 @@ example = let nodes = [ (1,[Var 'p'])
 kop :: (KrGr -> a) -> Kripke -> a
 kop f (Kripke (_,g)) = f g
 
-findCycles :: (Monad m) => (KrCtx -> m KrCtx) -> KrGr -> Path -> KrCtx -> m Path
-findCycles p gr hist c = 
-  if elem this hist
+findPaths :: (Monad m) 
+          => (KrCtx -> Path -> Bool) 
+          -> (KrCtx -> Path -> m KrCtx)
+          -> KrGr -> Path -> KrCtx 
+          -> m Path
+findPaths end sucS gr hist c = 
+  if end c hist
      then return (reverse hist')
-     else p c >>= findCycles p gr hist'
+     else sucS c hist >>= findPaths end sucS gr hist'
   where this = node' c
         hist' = this : hist
+
+isCycle :: KrCtx -> Path -> Bool
+isCycle c = elem (node' c)
+
+isNotCycle :: KrCtx -> Path -> Bool
+isNotCycle c = not . isCycle c
+
+findCycles :: (Monad m) 
+           => (KrCtx -> Path -> m KrCtx) 
+           -> KrGr -> Path -> KrCtx 
+           -> m Path
+findCycles = findPaths isCycle
