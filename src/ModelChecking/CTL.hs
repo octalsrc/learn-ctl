@@ -4,24 +4,19 @@ import Data.Map (fromList)
 import Data.List (union, intersect, (\\), nub)
 import Data.Maybe (listToMaybe, isJust, catMaybes)
 
-import Data.Logic.Propositional
 import Data.Graph.Inductive.Graph
 import Data.Graph.Kripke
+
+newtype Var = Var Char deriving (Show, Read, Eq, Ord)
 
 type KripkeCTL = Kripke Var
 type GrCTL = KrGr Var
 type CtxCTL = KrCtx Var
 
-nodeMap :: Expr -> CtxCTL -> Mapping
-nodeMap e c = let vs = variables e
-                  ps = lab' c
-                  f v = (v, elem v ps)
-              in fromList (map f vs)
-
 atom :: Char -> CTL
-atom = Atom . Variable . Var
+atom = Atom . Var
 
-data CTL = Atom Expr
+data CTL = Atom Var
          | Neg CTL
          | Con CTL CTL
          | Dis CTL CTL
@@ -37,7 +32,7 @@ modelCheck (Kripke (is,gr)) ctl =
 check :: GrCTL -> CTL -> [Node]
 check gr c = 
   case c of
-    Atom e -> satOp opAtom gr e
+    Atom v -> satOp opAtom gr v
     Neg c' -> rop (nodes gr \\) gr c'
     Con c1' c2' -> rop2 intersect gr c1' c2'
     Dis c1' c2' -> rop2 union gr c2' c2'
@@ -62,10 +57,10 @@ satOp op kr phi = resTN $ satOp' op kr phi
 resTN :: [(CtxCTL, Path)] -> [Node]
 resTN = map node' . map fst
 
-opAtom :: OpCTL Expr
-opAtom gr exp c = if interpret exp (nodeMap exp c)
-                     then Just [node' c]
-                     else Nothing
+opAtom :: OpCTL Var
+opAtom gr v c = if v `elem` lab' c
+                   then Just [node' c]
+                   else Nothing
 
 sat :: [Node] -> CtxCTL -> Bool
 sat phi = flip elem phi . node'
