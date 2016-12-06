@@ -4,7 +4,7 @@
 module Main where
 
 import qualified Data.Map as Map
-import Data.Map (Map)
+import Data.Map (Map, fromList)
 import Data.Text (Text, pack, unpack)
 import Text.Read (readMaybe)
 
@@ -16,8 +16,11 @@ main :: IO ()
 main = mainWidget (do el "div" $ text "Welcome to Computer-Aided Verification!"
                       el "div" (do t <- textInput def
                                    dynText $ fmap tryExpand $ _textInput_value t)
-                      el "div" (svgAttr "svg" (Map.fromList [("width","100")
-                                                            ,("height","100")]) graph))
+                      exampleSvg [1,5])
+
+simpleSvg :: MonadWidget t m => m ()
+simpleSvg = el "div" (svgAttr "svg" (fromList [("width","100")
+                                              ,("height","100")]) graph)
 
 tryExpand :: Text -> Text
 tryExpand mctl' = if mctl' == ""
@@ -26,12 +29,47 @@ tryExpand mctl' = if mctl' == ""
                             Just ctl' -> (pack . show . expand) ctl'
                             Nothing -> "(not yet a valid CTL formula...)"
 
+exampleKr = let states = [(1,map Var "p")
+                         ,(2,[])
+                         ,(3,map Var "q")
+                         ,(4,map Var "q")
+                         ,(5,map Var "pq")]
+                edges = [(1,2),(1,3),(1,4)
+                        ,(2,2),(2,1)
+                        ,(3,2)
+                        ,(5,5),(5,4)]
+                initStates = [1,5]
+            in mkKripke states edges initStates
+
+svgSize :: [(Text,Text)]
+svgSize = [("width","600"),("height","500")]
+
+exampleSvg :: MonadWidget t m => [Int] -> m ()
+exampleSvg ns = svgAttr "svg" (fromList svgSize) $ do 
+  kstate ns 1 "p"   (450,100)
+  kstate ns 2 ""    (100,100)
+  kstate ns 3 "p q" (120,300)
+  kstate ns 4 "q"   (550,250)
+  kstate ns 5 "p q" (350,430)
+
+show' :: Int -> Text
+show' = pack . show
+
+kstate :: (MonadWidget t m) => [Int] -> Int -> Text -> (Int,Int) -> m ()
+kstate ns i ps (x,y) = circle (fromList as)
+  where as = [("cx",show' x),("cy",show' y),("r","40")
+             ,("stroke",fst act),("stroke-width",snd act)
+             ,("fill","white")] :: [(Text,Text)]
+        act = if i `elem` ns
+                 then ("red","5") :: (Text,Text)
+                 else ("black","3") :: (Text,Text)
+
 graph :: (MonadWidget t m) => m ()
-graph = circle (Map.fromList [("cx","50")
-                             ,("cy","50")
-                             ,("r","40")
-                             ,("stroke","green")
-                             ,("stroke-width","4")])
+graph = circle (fromList [("cx","50")
+                         ,("cy","50")
+                         ,("r","40")
+                         ,("stroke","green")
+                         ,("stroke-width","4")])
 
 circle :: (MonadWidget t m) => Map Text Text -> m ()                                    
 circle attrs = svgAttr "circle" attrs blank

@@ -17,8 +17,8 @@ newtype Kripke v = Kripke { getKripke :: ([Node], KrGr v) }
 
 krGr = snd . getKripke
 
-mkKripke :: KrGr v -> [Node] -> Kripke v
-mkKripke gr is = Kripke (is,gr)
+mkKripke :: [(Node,[v])] -> [(Node,Node)] -> [Node] -> Kripke v
+mkKripke ns es is = Kripke (is,mkGraph ns (map (\(a,b) -> (a,b,())) es))
 
 kop :: (KrGr v -> a) -> Kripke v -> a
 kop f (Kripke (_,g)) = f g

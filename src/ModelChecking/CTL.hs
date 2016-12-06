@@ -146,10 +146,10 @@ testPrint = putStrLn
 example :: KripkeCTL
 example = let nodes = [ (1,[Var 'p'])
                       , (2,[Var 'q']) ]
-              edges = [ (1,2,())
-                      , (1,1,())
-                      , (2,2,()) ]
-          in mkKripke (mkGraph nodes edges) [1]
+              edges = [ (1,2)
+                      , (1,1)
+                      , (2,2) ]
+          in mkKripke nodes edges [1]
 
 example2 :: KripkeCTL
 example2 = kopk (addLabel (Var 'w') ((kop context) example 2)) example
