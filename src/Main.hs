@@ -13,9 +13,13 @@ import Data.Graph.Inductive.Graph (Path)
 import Data.Graph.Kripke
 import Reflex.Dom
 
+fullWidth :: Map Text Text
+fullWidth = fromList [("style","width:100%; font-size: x-large;")]
+
 main :: IO ()
-main = mainWidget (do el "div" $ text "Welcome to Computer-Aided Verification!"
-                      el "div" (do t <- textInput def
+main = mainWidget (do el "div" (do elAttr "p" fullWidth (text "Checking the negation of:") 
+                                   t <- textInput $ def & textInputConfig_attributes .~ (constDyn fullWidth)
+                                   elAttr "div" (fromList [("style","height: 30px;")]) blank
                                    let ctl = fmap tryExpand . _textInput_value $ t
                                        path :: (Text,Maybe CTL) -> [Int]
                                        path c = case snd c of
@@ -28,10 +32,13 @@ main = mainWidget (do el "div" $ text "Welcome to Computer-Aided Verification!"
                                        graph c = exampleSvg (path c)
                                    
                                     
-                                   dynText (fmap fst ctl)
-                                   el "div" blank
+                                   elAttr "div" (fromList [("style","font-size: x-large; height: 30px;")]) (dynText (fmap fst ctl))
+                                   elAttr "div" (fromList [("style","font-size: x-large; height: 60px;")]) (dynText (fmap (decide . path) ctl))
                                    dyn (fmap graph ctl)
                                    return ()))
+
+decide [] = "SAT"
+decide as = pack ("UNSAT: " ++ show as)
 
 simpleSvg :: MonadWidget t m => m ()
 simpleSvg = el "div" (svgAttr "svg" (fromList [("width","100")
@@ -41,11 +48,11 @@ tryExpand :: Text -> (Text,Maybe CTL)
 tryExpand mctl' = if mctl' == ""
                      then ("", Nothing)
                      else case readMaybe (unpack mctl') :: Maybe CTL' of
-                            Just ctl' -> ((pack . show . expand) ctl', Just (expand ctl'))
+                            Just ctl' -> ((pack . ("Expanded form: " ++). show . Neg . expand) ctl', Just (expand ctl'))
                             Nothing -> ("(not yet a valid CTL formula...)", Nothing)
 
 exampleKr = let states = [(1,map Var "p")
-                         ,(2,map Var "s")
+                         ,(2,map Var "st")
                          ,(3,map Var "q")
                          ,(4,map Var "qr")
                          ,(5,map Var "s")]
@@ -65,7 +72,7 @@ exampleSvg ns = svgAttr "svg" (fromList svgSize) $ do
   kloop ns (5,5) (350,445)
 
   kstate ns 1 "p"   (380,100)
-  kstate ns 2 "s"   (100,100)
+  kstate ns 2 "s t" (100,100)
   kstate ns 3 "q"   (120,300)
   kstate ns 4 "q r" (430,280)
   kstate ns 5 "s"   (300,430)

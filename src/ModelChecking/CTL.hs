@@ -84,7 +84,7 @@ check gr c =
     Neg c' -> rop (map (\a -> (a,[a]::Path)) . (nodes gr \\) . map fst) gr c'
     Con c1' c2' -> rop2 (intersectBy lbl) gr c1' c2'
       where lbl (l1,_) (l2,_) = l1 == l2
-    Dis c1' c2' -> rop2 union gr c2' c2'
+    Dis c1' c2' -> rop2 union gr c1' c2'
     EX c' -> rop (satOp opEX gr) gr c'
     EG c' -> rop (satOp opEG gr) gr c'
     EU c1' c2' -> rop2 (\a b -> satOp opEU gr (a,b)) gr c1' c2'
