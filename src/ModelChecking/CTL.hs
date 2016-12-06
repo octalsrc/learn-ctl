@@ -71,11 +71,11 @@ data CTL = Atom Var
          
          deriving (Show, Read, Eq, Ord)
 
-modelCheck :: KripkeCTL -> CTL -> [(Node,Path)]
+modelCheck :: KripkeCTL -> CTL -> Maybe Path
 modelCheck (Kripke (is,gr)) ctl = 
   let sats = check gr ctl
       judge i = listToMaybe (filter ((== i) . fst) sats)
-  in catMaybes (map judge is)
+  in fmap snd . listToMaybe . catMaybes . map judge $ is
 
 check :: GrCTL -> CTL -> [(Node, Path)]
 check gr c = 
