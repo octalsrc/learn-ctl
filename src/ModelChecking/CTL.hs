@@ -81,7 +81,7 @@ check :: GrCTL -> CTL -> [(Node, Path)]
 check gr c = 
   case c of
     Atom v -> satOp opAtom gr v
-    Neg c' -> rop (map (\a -> (a,[]::Path)) . (nodes gr \\) . map fst) gr c'
+    Neg c' -> rop (map (\a -> (a,[a]::Path)) . (nodes gr \\) . map fst) gr c'
     Con c1' c2' -> rop2 intersect gr c1' c2'
     Dis c1' c2' -> rop2 union gr c2' c2'
     EX c' -> rop (satOp opEX gr) gr c'

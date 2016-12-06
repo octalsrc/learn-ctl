@@ -29,7 +29,7 @@ main = mainWidget (do el "div" $ text "Welcome to Computer-Aided Verification!"
                                    
                                     
                                    dynText (fmap fst ctl)
-                                   simpleSvg
+                                   el "div" blank
                                    dyn (fmap graph ctl)
                                    return ()))
 
@@ -45,10 +45,10 @@ tryExpand mctl' = if mctl' == ""
                             Nothing -> ("(not yet a valid CTL formula...)", Nothing)
 
 exampleKr = let states = [(1,map Var "p")
-                         ,(2,[])
+                         ,(2,map Var "s")
                          ,(3,map Var "q")
-                         ,(4,map Var "q")
-                         ,(5,map Var "pq")]
+                         ,(4,map Var "qr")
+                         ,(5,map Var "s")]
                 edges = [(1,2),(1,3),(1,4)
                         ,(2,2),(2,1)
                         ,(3,2)
@@ -62,19 +62,23 @@ svgSize = [("width","600"),("height","500")]
 exampleSvg :: MonadWidget t m => [Int] -> m ()
 exampleSvg ns = svgAttr "svg" (fromList svgSize) $ do 
   kstate ns 1 "p"   (450,100)
-  kstate ns 2 ""    (100,100)
-  kstate ns 3 "p q" (120,300)
-  kstate ns 4 "q"   (550,250)
-  kstate ns 5 "p q" (350,430)
+  kstate ns 2 "s"    (100,100)
+  kstate ns 3 "q" (120,300)
+  kstate ns 4 "q r"   (430,280)
+  kstate ns 5 "s" (300,430)
 
 show' :: Int -> Text
 show' = pack . show
 
 kstate :: (MonadWidget t m) => Path -> Int -> Text -> (Int,Int) -> m ()
-kstate ns i ps (x,y) = circle (fromList as)
+kstate ns i ps (x,y) = circle (fromList as) 
+                       >> svgtext (show' i) (fromList ts) 
+                       >> svgtext ps (fromList ts')
   where as = [("cx",show' x),("cy",show' y),("r","40")
              ,("stroke",fst act),("stroke-width",snd act)
              ,("fill","white")] :: [(Text,Text)]
+        ts  = [("x",show' (x - 12)),("y",show' (y + 17)),("font-size","45")]
+        ts' = [("x",show' (x + 55)),("y",show' (y + 20)),("font-size","35")]
         act = if i `elem` ns
                  then ("red","5") :: (Text,Text)
                  else ("black","3") :: (Text,Text)
@@ -89,6 +93,8 @@ graph = circle (fromList [("cx","50")
 circle :: (MonadWidget t m) => Map Text Text -> m ()                                    
 circle attrs = svgAttr "circle" attrs blank
 
+svgtext :: (MonadWidget t m) => Text -> Map Text Text -> m ()                                    
+svgtext t attrs = svgAttr "text" attrs (text t)
 
 
 svgDynAttr' :: forall t m a. MonadWidget t m => Text -> Dynamic t (Map Text Text) -> m a -> m (El t, a)
