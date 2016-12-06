@@ -71,16 +71,17 @@ data CTL = Atom Var
          
          deriving (Show, Read, Eq, Ord)
 
-modelCheck :: KripkeCTL -> CTL -> [Node]
+modelCheck :: KripkeCTL -> CTL -> [(Node,Path)]
 modelCheck (Kripke (is,gr)) ctl = 
   let sats = check gr ctl
-  in filter (not . flip elem sats) is
+      judge i = listToMaybe (filter ((== i) . fst) sats)
+  in catMaybes (map judge is)
 
-check :: GrCTL -> CTL -> [Node]
+check :: GrCTL -> CTL -> [(Node, Path)]
 check gr c = 
   case c of
     Atom v -> satOp opAtom gr v
-    Neg c' -> rop (nodes gr \\) gr c'
+    Neg c' -> rop (map (\a -> (a,[]::Path)) . (nodes gr \\) . map fst) gr c'
     Con c1' c2' -> rop2 intersect gr c1' c2'
     Dis c1' c2' -> rop2 union gr c2' c2'
     EX c' -> rop (satOp opEX gr) gr c'
@@ -99,10 +100,11 @@ satOp' :: OpCTL e
 satOp' op gr phi = catMaybes $ map runOp (contexts gr)
   where runOp c = fmap (\path -> (c,path)) (op gr phi c)
 
-satOp op kr phi = resTN $ satOp' op kr phi
+satOp :: OpCTL e -> GrCTL -> e -> [(Node, Path)]
+satOp op gr phi = resTN $ satOp' op gr phi
 
-resTN :: [(CtxCTL, Path)] -> [Node]
-resTN = map node' . map fst
+resTN :: [(CtxCTL, Path)] -> [(Node, Path)]
+resTN = map (\(a,b) -> (node' a, b))
 
 opAtom :: OpCTL Var
 opAtom gr v c = case v of
@@ -112,31 +114,37 @@ opAtom gr v c = case v of
                           then Just [node' c]
                           else Nothing
 
-sat :: [Node] -> CtxCTL -> Bool
-sat phi = flip elem phi . node'
+sat :: [(Node,Path)] -> CtxCTL -> Maybe Path
+sat phi c = (fmap snd . listToMaybe) (filter (\p -> fst p == node' c) phi)
 
-sucEX :: GrCTL -> [Node] -> CtxCTL -> [CtxCTL]
-sucEX gr phi c = filter (sat phi) (succtx gr c)
+sucEX :: GrCTL -> [(Node,Path)] -> CtxCTL -> [(CtxCTL,Path)]
+sucEX gr phi c = catMaybes (map satphi $ succtx gr c)
+  where satphi c = case sat phi c of
+                     Just p -> Just (c,p)
+                     Nothing -> Nothing
 
-opEX :: OpCTL [Node]
+opEX :: OpCTL [(Node,Path)]
 opEX gr phi c = let res = sucEX gr phi c
-                    mkp c' = [node' c, node' c']
+                    mkp c' = node' c : (snd c')
                  in (fmap mkp . listToMaybe) res
 
-opEG :: OpCTL [Node]
-opEG gr phi c = 
-  if sat phi c
-     then listToMaybe $ findCycles (\c _ -> sucEX gr phi c) gr [] c
-     else Nothing
+opEG :: OpCTL [(Node,Path)]
+opEG gr phi c =
+  case sat phi c of
+    Just p -> (fmap (capp p) . listToMaybe) $ findCycles (\c _ -> map fst (sucEX gr phi c)) gr [] c
+    Nothing -> Nothing
 
-opEU :: OpCTL ([Node],[Node])
+opEU :: OpCTL ([(Node, Path)],[(Node,Path)])
 opEU gr (psi,phi) c = 
-  if sat fml c
-     then listToMaybe $ findPaths end sucS gr [] c
-     else Nothing
+  case sat fml c of
+    Just p -> (fmap (capp p) . listToMaybe) $ findPaths (end) sucS gr [] c
+    Nothing -> Nothing
   where fml = union psi phi
-        end c = const (sat phi c)
-        sucS c hist = filter (\c -> isNotCycle c hist) (sucEX gr fml c)
+        end c p = sat phi c
+        sucS c hist = map fst $ filter (\c -> isNotCycle (fst c) hist) (sucEX gr fml c)
+
+capp :: Path -> Path -> Path
+capp p p' = p ++ p'
 
 testPrint :: [(CtxCTL,Path)] -> IO ()
 testPrint = putStrLn 

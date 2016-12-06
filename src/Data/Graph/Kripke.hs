@@ -27,22 +27,26 @@ kopk :: (KrGr v -> KrGr v) -> Kripke v -> Kripke v
 kopk f (Kripke (is,g)) = Kripke (is,f g)
 
 findPaths :: (Monad m) 
-          => (KrCtx v -> Path -> Bool) 
+          => (KrCtx v -> Path -> Maybe Path)
           -> (KrCtx v -> Path -> m (KrCtx v))
           -> KrGr v -> Path -> KrCtx v 
           -> m Path
-findPaths end sucS gr hist c = 
-  if end c hist
-     then return (reverse hist')
-     else sucS c hist >>= findPaths end sucS gr hist'
+findPaths end sucS gr hist c =
+  case end c hist of
+    Just p -> return (reverse hist' ++ p)
+    Nothing -> sucS c hist >>= findPaths end sucS gr hist'
   where this = node' c
         hist' = this : hist
-
-isCycle :: KrCtx v -> Path -> Bool
-isCycle c = elem (node' c)
+        
+isCycle :: KrCtx v -> Path -> Maybe Path
+isCycle c p = if elem (node' c) p
+                 then Just [node' c]
+                 else Nothing
 
 isNotCycle :: KrCtx v -> Path -> Bool
-isNotCycle c = not . isCycle c
+isNotCycle c p = case isCycle c p of
+                   Just _ -> False
+                   Nothing -> True
 
 findCycles :: (Monad m) 
            => (KrCtx v -> Path -> m (KrCtx v)) 
