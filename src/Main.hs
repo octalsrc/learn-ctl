@@ -9,25 +9,40 @@ import Data.Text (Text, pack, unpack)
 import Text.Read (readMaybe)
 
 import ModelChecking.CTL
+import Data.Graph.Inductive.Graph (Path)
 import Data.Graph.Kripke
 import Reflex.Dom
 
 main :: IO ()
 main = mainWidget (do el "div" $ text "Welcome to Computer-Aided Verification!"
                       el "div" (do t <- textInput def
-                                   dynText $ fmap tryExpand $ _textInput_value t)
-                      exampleSvg [1,5])
+                                   let ctl = fmap tryExpand . _textInput_value $ t
+                                       path :: (Text,Maybe CTL) -> [Int]
+                                       path c = case snd c of
+                                                  Just p -> case modelCheck exampleKr p of
+                                                              Just p -> p
+                                                              Nothing -> []
+                                                  Nothing -> []
+                                                  
+                                       graph :: MonadWidget t m => (Text,Maybe CTL) -> m ()
+                                       graph c = exampleSvg (path c)
+                                   
+                                    
+                                   dynText (fmap fst ctl)
+                                   simpleSvg
+                                   dyn (fmap graph ctl)
+                                   return ()))
 
 simpleSvg :: MonadWidget t m => m ()
 simpleSvg = el "div" (svgAttr "svg" (fromList [("width","100")
                                               ,("height","100")]) graph)
 
-tryExpand :: Text -> Text
+tryExpand :: Text -> (Text,Maybe CTL)
 tryExpand mctl' = if mctl' == ""
-                     then ""
+                     then ("", Nothing)
                      else case readMaybe (unpack mctl') :: Maybe CTL' of
-                            Just ctl' -> (pack . show . expand) ctl'
-                            Nothing -> "(not yet a valid CTL formula...)"
+                            Just ctl' -> ((pack . show . expand) ctl', Just (expand ctl'))
+                            Nothing -> ("(not yet a valid CTL formula...)", Nothing)
 
 exampleKr = let states = [(1,map Var "p")
                          ,(2,[])
@@ -55,7 +70,7 @@ exampleSvg ns = svgAttr "svg" (fromList svgSize) $ do
 show' :: Int -> Text
 show' = pack . show
 
-kstate :: (MonadWidget t m) => [Int] -> Int -> Text -> (Int,Int) -> m ()
+kstate :: (MonadWidget t m) => Path -> Int -> Text -> (Int,Int) -> m ()
 kstate ns i ps (x,y) = circle (fromList as)
   where as = [("cx",show' x),("cy",show' y),("r","40")
              ,("stroke",fst act),("stroke-width",snd act)
