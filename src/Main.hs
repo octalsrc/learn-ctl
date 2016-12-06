@@ -61,16 +61,53 @@ svgSize = [("width","600"),("height","500")]
 
 exampleSvg :: MonadWidget t m => [Int] -> m ()
 exampleSvg ns = svgAttr "svg" (fromList svgSize) $ do 
-  kstate ns 1 "p"   (450,100)
-  kstate ns 2 "s"    (100,100)
-  kstate ns 3 "q" (120,300)
-  kstate ns 4 "q r"   (430,280)
-  kstate ns 5 "s" (300,430)
+  kloop ns (2,2) (60,60)
+  kloop ns (5,5) (350,445)
+
+  kstate ns 1 "p"   (380,100)
+  kstate ns 2 "s"   (100,100)
+  kstate ns 3 "q"   (120,300)
+  kstate ns 4 "q r" (430,280)
+  kstate ns 5 "s"   (300,430)
+  
+  kedge ns (0,1) "M 520 20 L 425 65" (425,65)
+  kedge ns (0,5) "M 190 480 L 245 450" (245,450)
+  
+  kedge ns (3,2) "M 110 250 L 105 163" (105,163)
+  kedge ns (1,3) "M 340 130 L 162 252" (162,252)
+  kedge ns (5,4) "M 332 380 L 390 320" (390,320)
+  kedge ns (2,1) "M 140  60 L 340  60" (340,60)
+  kedge ns (1,2) "M 150  80 L 330  80" (150,80)
+  kedge ns (1,4) "M 400 145 L 420 220" (420,220)
+
+kedge :: MonadWidget t m => [Int] -> (Int,Int) -> Text -> (Int,Int) -> m ()
+kedge ns (a,b) draw end = svgpath draw as >> circle (fromList (as ++ cs))
+  where as = if (thisEdge ns (a,b))
+                then [("stroke","red"),("stroke-width","5"),("fill","red")]
+                else [("stroke","blue"),("stroke-width","3")]
+        cs = [("cx",show' (fst end)),("cy",show' (snd end)),("r","6")]
+
+kloop :: MonadWidget t m => [Int] -> (Int,Int) -> (Int,Int) -> m ()
+kloop ns (a,b) (x,y) = circle (fromList as)
+  where as = [("cx",show' x),("cy",show' y),("r","35"),("fill","white")]
+             ++ if thisEdge ns (a,b)
+                   then [("stroke","red"),("stroke-width","5")]
+                   else [("stroke","blue"),("stroke-width","3")]
+
+thisEdge :: [Int] -> (Int,Int) -> Bool
+thisEdge [] _ = False
+thisEdge ps (i,i') = if i == 0
+                        then head ps == i'
+                        else find (i,i') ps
+  where find (a,b) (c:d:es) = if a == c && b == d
+                                 then True
+                                 else find (a,b) (d:es)
+        find _ _ = False
 
 show' :: Int -> Text
 show' = pack . show
 
-kstate :: (MonadWidget t m) => Path -> Int -> Text -> (Int,Int) -> m ()
+kstate :: (MonadWidget t m) => [Int] -> Int -> Text -> (Int,Int) -> m ()
 kstate ns i ps (x,y) = circle (fromList as) 
                        >> svgtext (show' i) (fromList ts) 
                        >> svgtext ps (fromList ts')
@@ -92,6 +129,9 @@ graph = circle (fromList [("cx","50")
 
 circle :: (MonadWidget t m) => Map Text Text -> m ()                                    
 circle attrs = svgAttr "circle" attrs blank
+
+svgpath :: (MonadWidget t m) => Text -> [(Text,Text)] -> m ()                                    
+svgpath draw attrs = svgAttr "path" (fromList (("d",draw) : attrs)) blank
 
 svgtext :: (MonadWidget t m) => Text -> Map Text Text -> m ()                                    
 svgtext t attrs = svgAttr "text" attrs (text t)

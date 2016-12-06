@@ -1,7 +1,7 @@
 module ModelChecking.CTL where
 
 import Data.Map (fromList)
-import Data.List (union, intersect, (\\), nub)
+import Data.List (union, intersectBy, (\\), nub)
 import Data.Maybe (listToMaybe, isJust, catMaybes)
 
 import Data.Graph.Inductive.Graph
@@ -82,7 +82,8 @@ check gr c =
   case c of
     Atom v -> satOp opAtom gr v
     Neg c' -> rop (map (\a -> (a,[a]::Path)) . (nodes gr \\) . map fst) gr c'
-    Con c1' c2' -> rop2 intersect gr c1' c2'
+    Con c1' c2' -> rop2 (intersectBy lbl) gr c1' c2'
+      where lbl (l1,_) (l2,_) = l1 == l2
     Dis c1' c2' -> rop2 union gr c2' c2'
     EX c' -> rop (satOp opEX gr) gr c'
     EG c' -> rop (satOp opEG gr) gr c'
