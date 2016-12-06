@@ -5,17 +5,26 @@ module Main where
 
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.Text (Text)
+import Data.Text (Text, pack, unpack)
+import Text.Read (readMaybe)
 
+import ModelChecking.CTL
 import Data.Graph.Kripke
 import Reflex.Dom
 
 main :: IO ()
 main = mainWidget (do el "div" $ text "Welcome to Computer-Aided Verification!"
                       el "div" (do t <- textInput def
-                                   dynText $ _textInput_value t)
+                                   dynText $ fmap tryExpand $ _textInput_value t)
                       el "div" (svgAttr "svg" (Map.fromList [("width","100")
                                                             ,("height","100")]) graph))
+
+tryExpand :: Text -> Text
+tryExpand mctl' = if mctl' == ""
+                     then ""
+                     else case readMaybe (unpack mctl') :: Maybe CTL' of
+                            Just ctl' -> (pack . show . expand) ctl'
+                            Nothing -> "(not yet a valid CTL formula...)"
 
 graph :: (MonadWidget t m) => m ()
 graph = circle (Map.fromList [("cx","50")
