@@ -17,7 +17,8 @@ fullWidth :: Map Text Text
 fullWidth = fromList [("style","width:100%; font-size: x-large;")]
 
 main :: IO ()
-main = mainWidget (do el "div" (do elAttr "p" fullWidth (text "Checking the negation of:") 
+main = mainWidget (do el "div" (do el "h1" (text "LearnCTL")
+                                   elAttr "p" fullWidth (text "Checking the negation of:") 
                                    t <- textInput $ def & textInputConfig_attributes .~ (constDyn fullWidth)
                                    elAttr "div" (fromList [("style","height: 30px;")]) blank
                                    let ctl = fmap tryExpand . _textInput_value $ t

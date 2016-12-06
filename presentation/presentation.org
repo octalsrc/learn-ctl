@@ -1,0 +1,45 @@
+#+TITLE: A Reactive Teacher for CTL
+#+DATE: December 6, 2016
+#+AUTHOR: Nicholas Lewchenko
+#+STARTUP: beamer
+#+OPTIONS: H:2
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [presentation]
+#+BEAMER_THEME: Dresden
+#+BEAMER_COLOR_THEME: beetle
+
+* Learning Styles
+** "Reactive" Learning
+- Learning through experimentation
+- Prompt feedback
+- Quick executions
+* The LearnCTL tool
+** LearnCTL
+- Performs =CTL= formula expansion
+- Checks formula on a Kripke structure, displaying counter-example if
+  found
+- Runs in the web-browser!  Try it out yourself!
+  - ~http://mstore.oct.moe/learn-ctl~
+** Practicalities
+- Written in Haskell
+  - =CTL= formulae and model checking implemented almost from scratch
+    (200 LOC)
+- =GHCJS= + =Reflex= to run in the web browser
+** Design
+- Model checking works up from the leaves (post-order traversal)
+  - A list of nodes that satisfied child formulae is maintained, along
+    with a "proof" for each node in the form of a satisfying path
+  - All formulae are negated at the root, so UNSAT is demonstrated
+    with any proof-path that makes it all the way up the tree
+*** Quirks                                                          :B_block:
+:PROPERTIES:
+:BEAMER_env: block
+:END:
+- A conjunction may see the same node with two different proofs
+  - one proof is dropped, even though both are equally important
+- A negation in the middle of the formula cuts all proof-paths
+* Future work
+** Future work
+- Cleaner syntax for formula input
+- Show the steps of the model-checking algorithm in a graphical way
+- Randomly-produced Kripke structures of a given size

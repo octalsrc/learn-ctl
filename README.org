@@ -1,0 +1,71 @@
+* LearnCTL
+This README is the primary documentation for my project.
+
+*LearnCTL* is a single-page web app that takes CTL formulas from the
+user as input and model-checks them on a given Kripke structure after
+showing the expanded-form CTL formula.  If the formula is UNSAT, a
+trace proving so is high-lighted on the Kripke structure.
+
+It can be used by opening this file in a web browser: 
+
+[[./dist/build/learn-ctl/learn-ctl.jsexe/index.html]]
+
+The purpose of this project is to provide students like myself with an
+environment in which to quickly learn the meaning of CTL operators and
+their expansions.  I believe the tool is an improvement to the (still
+necessary) definition-with-example in a paper or textbook chapter
+because it allows a student to ask direct, specific questions (check
+/any/ formula) and responds with immediate, graphical feedback.
+** Implementation
+*** CTL
+For this tool, I've implemented the CTL model-checking algorithm,
+based on the definitions in the class notes.  This code can be found
+in the [[./src/ModelChecking/CTL.hs][ModelChecking/CTL.hs]] file.  There are two CTL data-structures:
+
+- CTL' is the full language with AG' and EF' and all those.  This is
+  used to parse user input
+- CTL is the core, "expanded", language, containing only EX, EG, and
+  EU.  CTL' is expanded to CTL and shown to the user before the
+  model-checking algorithm is performed.
+  
+The model-checking algorithm works up from its leaves, carrying upward
+lists of graph-nodes that satisfied the child formula.  Each node also
+carries a trace "proving" its satisfiability, which grows each time it
+makes it upward to another formula node.  At the end of the algorithm,
+we have a list of initial-states that satisfy the CTL property and
+proof-traces for each of them.
+
+When this is done, the satisfiability of the /negation/ of the user's
+formula is actually presented to the user, for two reasons:
+
+- It is more direct for a user to type in a formula they want to see
+  an example of, and then have the app highlight an example trace that
+  satisfies it (and thus is a counterexample to the negation, which is
+  why it's highlighted).
+- Traces only need to be used as counterexamples, so only one trace
+  ever needs to be shown on the graph.  Multiple traces would write
+  over each other and be hard to read.
+  
+I used an external library called "fgl" for graph manipulations, and I
+defined Kripke structures in terms of it: [[./src/Data/Graph/Kripke.hs][Data/Graph/Kripke.hs]].
+*** Web interface
+As a learning tool, it was important that this be immediately
+accessible from the web browser.  I used GHCJS to compile Haskell code
+to JavaScript and the "Reflex" library to create the reactive user
+interface.
+** Future work
+*** Cleaner syntax for formula input
+I used the automatically-provided parser for new data types to parse
+user-provided CTL' formulas, which is really verbose and hard to
+write.  I would like to implement a parser that takes the "textbook"
+syntax of the language.
+*** Show the steps of the model-checking algorithm in a graphical way
+The actual model-checking algorithm, which is the second thing to
+learn after the CTL language, is still invisible to the user.  I'd
+like to display the CTL tree as it is consumed from its leaves.
+*** Randomly-produced Kripke structures of a given size
+Due to time constraints, I had to hand-svg a single Kripke structure
+for all of the app's interactions.  It would be nice to produce random
+new structures in case a particular one won't answer a question a
+student has about a particular formula's meaning.
+
