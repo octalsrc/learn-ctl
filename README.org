@@ -1,14 +1,11 @@
 * LearnCTL
-This README is the primary documentation for my project.
-
 *LearnCTL* is a single-page web app that takes CTL formulas from the
 user as input and model-checks them on a given Kripke structure after
 showing the expanded-form CTL formula.  If the formula is UNSAT, a
 trace proving so is high-lighted on the Kripke structure.
 
-It can be used by opening this file in a web browser: 
-
-[[./dist/build/learn-ctl/learn-ctl.jsexe/index.html]]
+I don't have documentation for building it at the moment, so if you'd
+like to try it out, [[http://mstore.oct.moe/learn-ctl][it's hosted here]].
 
 The purpose of this project is to provide students like myself with an
 environment in which to quickly learn the meaning of CTL operators and
